@@ -1,5 +1,5 @@
 -- Subscription Plans
-
+ 
 -- FAQ Categories
 INSERT INTO "faq_categories" ("id", "name", "description", "order_index", "is_active", "created_at", "updated_at") VALUES
 ('a1b2c3d4-e5f6-4789-abcd-ef1234567890', 'Cơ Bản', 'Các câu hỏi thường gặp về dịch vụ và cách sử dụng cơ bản', 1, true, '2025-06-24 20:30:00', '2025-06-24 20:30:00'),

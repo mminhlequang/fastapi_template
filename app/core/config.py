@@ -161,6 +161,9 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    # Firebase configuration for Phone OTP
+    FIREBASE_SERVICE_ACCOUNT_FILE: str = "firebase-service-account.json"
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (

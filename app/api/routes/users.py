@@ -2,7 +2,7 @@ import uuid
 from typing import Any, Optional
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, status
 from sqlmodel import col, delete, func, select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -448,6 +448,7 @@ async def social_login(*, session: SessionDep, social_login: SocialLoginRequest)
     provider_user_id = user_info.get("id")
     provider_email = user_info.get("email")
     provider_name = user_info.get("name")
+    phone_number = user_info.get("phone_number")  # For Firebase Phone auth
 
     if not provider_user_id:
         raise HTTPException(
@@ -479,12 +480,19 @@ async def social_login(*, session: SessionDep, social_login: SocialLoginRequest)
             user.avatar_url = user_info.get("uploaded_avatar_url")
     else:
         # Social account doesn't exist
-        # Try to find user by email if email is provided
+        # Try to find user by email if email is provided, or by phone for Firebase Phone
+        user = None
         if provider_email:
             user = get_user_by_email(session=session, email=provider_email)
+        elif phone_number and social_login.provider == "firebase_phone":
+            # For Firebase Phone, try to find user by phone number
+            from sqlmodel import select
+
+            statement = select(User).where(User.phone_number == phone_number)
+            user = session.exec(statement).first()
 
         if user:
-            # User exists with same email, link social account
+            # User exists with same email/phone, link social account
             create_social_account(
                 session=session,
                 user_id=user.id,
@@ -506,6 +514,7 @@ async def social_login(*, session: SessionDep, social_login: SocialLoginRequest)
                 provider_email=provider_email,
                 provider_name=provider_name,
                 avatar_url=avatar_url,
+                phone_number=phone_number,
             )
             is_new_user = True
 
@@ -617,7 +626,7 @@ def unlink_social_account(
     """
     Unlink a social account from current user.
     """
-    if provider not in ["facebook", "google", "apple"]:
+    if provider not in ["facebook", "google", "apple", "firebase_phone"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid provider"
         )

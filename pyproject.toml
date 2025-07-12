@@ -24,6 +24,7 @@ dependencies = [
     "python-dotenv",
     "boto3<2.0.0,>=1.26.0",
     "pillow<11.0.0,>=10.0.0",
+    "firebase-admin<7.0.0,>=6.4.0",
 ]
 
 [tool.uv]

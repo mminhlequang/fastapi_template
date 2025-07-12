@@ -28,7 +28,7 @@ from fastapi import UploadFile, HTTPException
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
+ 
 @dataclass
 class EmailData:
     html_content: str

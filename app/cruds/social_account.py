@@ -11,6 +11,11 @@ from app.core.security import get_password_hash
 from app.models import User, SocialAccount
 from app.schemas.user import UserCreate
 from app.utils.file_uploads import FileUploadService
+from app.utils.firebase_auth import (
+    verify_firebase_token,
+    extract_phone_from_firebase_token,
+    is_firebase_phone_provider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +91,26 @@ async def get_user_info_from_provider(
     elif provider == "apple":
         # TODO: Apple ID token validation is more complex, would need JWT decoding
         raise NotImplementedError("Apple login not implemented yet")
+    elif provider == "firebase_phone":
+        # Handle Firebase Phone authentication
+        token_data = verify_firebase_token(access_token)
+        if not token_data:
+            raise ValueError("Invalid Firebase token")
+
+        if not is_firebase_phone_provider(token_data):
+            raise ValueError("Token is not from Firebase Phone provider")
+
+        phone_number = extract_phone_from_firebase_token(token_data)
+        if not phone_number:
+            raise ValueError("Phone number not found in Firebase token")
+
+        # Return normalized data for Firebase Phone
+        return {
+            "id": token_data.get("uid"),
+            "email": None,  # Phone auth doesn't provide email
+            "name": f"User {phone_number[-4:]}",  # Generate name from phone
+            "phone_number": phone_number,
+        }
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
@@ -117,6 +142,10 @@ async def get_user_info_from_provider(
             # Get avatar URL from Google
             if user_data.get("picture"):
                 normalized_data["avatar_url"] = user_data.get("picture")
+
+        elif provider == "firebase_phone":
+            # Firebase phone data is already normalized
+            normalized_data = user_data
 
         # Upload avatar to space if available
         if "avatar_url" in normalized_data:
@@ -205,6 +234,7 @@ def create_user_from_social(
     provider_email: str | None = None,
     provider_name: str | None = None,
     avatar_url: str | None = None,
+    phone_number: str | None = None,
 ) -> User:
     """Create a new user from social login information"""
 
@@ -233,6 +263,10 @@ def create_user_from_social(
     # Add avatar URL if provided
     if avatar_url:
         user_data["avatar_url"] = avatar_url
+
+    # Add phone number if provided (for Firebase Phone auth)
+    if phone_number:
+        user_data["phone_number"] = phone_number
 
     user = User.model_validate(user_create, update=user_data)
 

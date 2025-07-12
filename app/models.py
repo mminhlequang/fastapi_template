@@ -99,7 +99,7 @@ class SubscriptionPlan(SQLModel, table=True):
     interval: str = Field(default="month", max_length=16)
     features: dict | None = Field(default=None, sa_column=Column(JSON))
     # New limits and permissions fields
-    
+
     # Lemon Squeezy integration
     lemon_product_id: str | None = Field(default=None, max_length=255)
     lemon_variant_id: str | None = Field(default=None, max_length=255)
