@@ -1,7 +1,7 @@
 """initialize_database_schema
 
 Revision ID: 8f9f6b5207f7
-Revises: 
+Revises:
 Create Date: 2025-07-12 16:55:31.884561
 
 """
@@ -21,7 +21,7 @@ depends_on = None
 def upgrade():
     # Create user table
     op.create_table(
-        "user",
+        "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("full_name", sa.String(length=255), nullable=True),
@@ -43,8 +43,8 @@ def upgrade():
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_user_email"), "user", ["email"], unique=True)
-    op.create_index(op.f("ix_user_ref_code"), "user", ["ref_code"], unique=True)
+    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    op.create_index(op.f("ix_users_ref_code"), "users", ["ref_code"], unique=True)
 
     # Create social_accounts table
     op.create_table(
@@ -56,14 +56,14 @@ def upgrade():
         sa.Column("provider_email", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("linked_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("provider", "provider_user_id", name="uq_provider_user"),
     )
 
     # Create billing_info table
     op.create_table(
-        "billing_info",
+        "billing_infos",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("company_name", sa.String(length=255), nullable=False),
@@ -74,7 +74,7 @@ def upgrade():
         sa.Column("country", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id"),
     )
@@ -90,7 +90,6 @@ def upgrade():
         sa.Column("currency", sa.String(length=16), nullable=False),
         sa.Column("interval", sa.String(length=16), nullable=False),
         sa.Column("features", postgresql.JSON(astext_type=sa.Text()), nullable=True),
-        
         sa.Column("lemon_product_id", sa.String(length=255), nullable=True),
         sa.Column("lemon_variant_id", sa.String(length=255), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False),
@@ -120,7 +119,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["subscription_plan_id"], ["subscription_plans.id"], ondelete="RESTRICT"
         ),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -139,7 +138,7 @@ def upgrade():
         sa.Column("paid_at", sa.DateTime(), nullable=True),
         sa.Column("receipt_url", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["user_subscription_id"], ["user_subscriptions.id"], ondelete="CASCADE"
         ),
@@ -156,7 +155,7 @@ def upgrade():
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -188,7 +187,7 @@ def upgrade():
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["user_project_id"], ["user_projects.id"], ondelete="CASCADE"
         ),
@@ -219,7 +218,7 @@ def upgrade():
         sa.Column("user_project_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["user_project_id"], ["user_projects.id"], ondelete="CASCADE"
         ),
@@ -276,7 +275,7 @@ def upgrade():
         sa.Column("sort_order", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["user_project_id"], ["user_projects.id"], ondelete="CASCADE"
         ),
@@ -363,7 +362,7 @@ def upgrade():
         sa.Column("is_active", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -538,6 +537,8 @@ def upgrade():
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("subject", sa.String(length=500), nullable=False),
         sa.Column("description", sa.String(), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=True),
+        sa.Column("phone_number", sa.String(length=255), nullable=True),
         sa.Column("status", sa.String(length=50), nullable=False),
         sa.Column("priority", sa.String(length=20), nullable=False),
         sa.Column("ticket_category_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -545,13 +546,13 @@ def upgrade():
         sa.Column("assigned_to", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["assigned_to"], ["user.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["assigned_to"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["ticket_category_id"],
             ["support_ticket_categories.id"],
             ondelete="SET NULL",
         ),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -598,7 +599,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["ticket_id"], ["support_tickets.id"], ondelete="CASCADE"
         ),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -774,9 +775,9 @@ def downgrade():
     op.drop_table("payments")
     op.drop_table("user_subscriptions")
     op.drop_table("subscription_plans")
-    op.drop_table("billing_info")
+    op.drop_table("billing_infos")
     op.drop_table("social_accounts")
 
-    op.drop_index(op.f("ix_user_ref_code"), table_name="user")
-    op.drop_index(op.f("ix_user_email"), table_name="user")
-    op.drop_table("user")
+    op.drop_index(op.f("ix_users_ref_code"), table_name="users")
+    op.drop_index(op.f("ix_users_email"), table_name="users")
+    op.drop_table("users")

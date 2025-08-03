@@ -55,6 +55,8 @@ class SupportTicketBase(BaseModel):
 
     subject: str = Field(..., max_length=500, description="Ticket subject")
     description: str = Field(..., description="Ticket description")
+    email: Optional[str] = Field(None, max_length=255, description="Email")
+    phone_number: Optional[str] = Field(None, max_length=255, description="Phone number")
     status: str = Field("open", max_length=50, description="Ticket status")
     priority: str = Field("medium", max_length=20, description="Ticket priority")
     ticket_category_id: Optional[uuid.UUID] = Field(None, description="Category ID")
@@ -71,6 +73,8 @@ class SupportTicketUpdate(BaseModel):
 
     subject: Optional[str] = Field(None, max_length=500, description="Ticket subject")
     description: Optional[str] = Field(None, description="Ticket description")
+    email: Optional[str] = Field(None, max_length=255, description="Email")
+    phone_number: Optional[str] = Field(None, max_length=255, description="Phone number")
     status: Optional[str] = Field(None, max_length=50, description="Ticket status")
     priority: Optional[str] = Field(None, max_length=20, description="Ticket priority")
     ticket_category_id: Optional[uuid.UUID] = Field(None, description="Category ID")

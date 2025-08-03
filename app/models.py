@@ -9,6 +9,7 @@ from sqlalchemy import Column, JSON, UniqueConstraint as sa_UniqueConstraint, Fo
 
 # Database model, database table inferred from class name
 class User(SQLModel, table=True):
+    __tablename__ = "users"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     full_name: str | None = Field(default=None, max_length=255)
@@ -43,7 +44,7 @@ class SocialAccount(SQLModel, table=True):
     __tablename__ = "social_accounts"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        sa_column=Column("user_id", ForeignKey("user.id", ondelete="CASCADE"))
+        sa_column=Column("user_id", ForeignKey("users.id", ondelete="CASCADE"))
     )
 
     # Provider info (tối thiểu)
@@ -69,11 +70,11 @@ class SocialAccount(SQLModel, table=True):
 
 # Billing info for user (company, tax, address, ...)
 class BillingInfo(SQLModel, table=True):
-    __tablename__ = "billing_info"
+    __tablename__ = "billing_infos"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
         sa_column=Column(
-            "user_id", ForeignKey("user.id", ondelete="CASCADE"), unique=True
+            "user_id", ForeignKey("users.id", ondelete="CASCADE"), unique=True
         )
     )
     company_name: str = Field(max_length=255)
@@ -116,7 +117,7 @@ class UserSubscription(SQLModel, table=True):
     __tablename__ = "user_subscriptions"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        sa_column=Column("user_id", ForeignKey("user.id", ondelete="CASCADE"))
+        sa_column=Column("user_id", ForeignKey("users.id", ondelete="CASCADE"))
     )
     subscription_plan_id: uuid.UUID = Field(
         sa_column=Column(
@@ -143,7 +144,7 @@ class Payment(SQLModel, table=True):
     __tablename__ = "payments"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
-        sa_column=Column("user_id", ForeignKey("user.id", ondelete="CASCADE"))
+        sa_column=Column("user_id", ForeignKey("users.id", ondelete="CASCADE"))
     )
     user_subscription_id: uuid.UUID = Field(
         sa_column=Column(
@@ -171,7 +172,7 @@ class UserProject(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="CASCADE"),
+            ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -201,7 +202,7 @@ class UserWebsite(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="CASCADE"),
+            ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -230,7 +231,7 @@ class UserProduct(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="CASCADE"),
+            ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -283,7 +284,7 @@ class UserFAQ(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="CASCADE"),
+            ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -398,7 +399,7 @@ class BlogUserAuthorProfile(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="CASCADE"),
+            ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -524,7 +525,7 @@ class SupportTicket(SQLModel, table=True):
     user_id: uuid.UUID | None = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="SET NULL"),
+            ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
             index=True,
         )
@@ -532,7 +533,7 @@ class SupportTicket(SQLModel, table=True):
     assigned_to: uuid.UUID | None = Field(
         sa_column=Column(
             "assigned_to",
-            ForeignKey("user.id", ondelete="SET NULL"),
+            ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
             index=True,
         )
@@ -571,7 +572,7 @@ class SupportTicketComment(SQLModel, table=True):
     user_id: uuid.UUID | None = Field(
         sa_column=Column(
             "user_id",
-            ForeignKey("user.id", ondelete="SET NULL"),
+            ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
             index=True,
         )
