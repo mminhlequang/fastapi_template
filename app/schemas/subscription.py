@@ -18,7 +18,6 @@ class UserPublic(BaseModel):
     company_name: str | None = Field(default=None, max_length=255)
     website_url: str | None = None
     avatar_url: str | None = None
-    role: str = Field(default="owner", max_length=32)
     lemon_customer_id: str | None = Field(default=None, max_length=255)
     is_active: bool = True
     is_superuser: bool = False

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
-    login,
+    auth,
     checkout,
     subscription,
     users,
@@ -15,7 +15,7 @@ from app.api.routes import (
 
 api_router = APIRouter()
 api_router.include_router(common.router)
-api_router.include_router(login.router)
+api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(checkout.router)

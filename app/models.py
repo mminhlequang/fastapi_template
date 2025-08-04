@@ -1,6 +1,6 @@
 import uuid
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
@@ -17,7 +17,6 @@ class User(SQLModel, table=True):
     company_name: str | None = Field(default=None, max_length=255)
     website_url: str | None = None
     avatar_url: str | None = None
-    role: str = Field(default="owner", max_length=32)
     lemon_customer_id: str | None = Field(default=None, max_length=255)
     is_superuser: bool = False
     ref_code: str | None = Field(default=None, max_length=32, unique=True, index=True)
@@ -26,6 +25,14 @@ class User(SQLModel, table=True):
     trial_expired_at: datetime | None = None
     email_verified: bool | None = None
     last_login_provider: str | None = Field(default=None, max_length=50)
+    country_code: str | None = Field(default=None, max_length=3)  # ISO 3166-1 alpha-2 (e.g. "VN", "US")
+    locale: str | None = Field(default="en", max_length=10)  # e.g. "en", "vi", "en-US"
+    timezone: str | None = Field(default=None, max_length=50)  # e.g. "Asia/Ho_Chi_Minh"
+    currency: str | None = Field(default=None, max_length=3)  # ISO 4217, e.g. "USD", "VND"
+    gender: str | None = Field(default=None, max_length=20)  # e.g. "male", "female", "other"
+    birth_date: date | None = None
+    bio: str | None = Field(default=None, max_length=500)
+    job_title: str | None = Field(default=None, max_length=255)
     hashed_password: str
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

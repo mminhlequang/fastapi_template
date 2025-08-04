@@ -1,6 +1,6 @@
 from typing import List, Optional, ForwardRef
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 from app.models import (
     BillingInfo,
@@ -28,7 +28,6 @@ class UserBase(BaseModel):
     company_name: str | None = Field(default=None, max_length=255)
     website_url: str | None = None
     avatar_url: str | None = None
-    role: str = Field(default="owner", max_length=32)
     lemon_customer_id: str | None = Field(default=None, max_length=255)
     is_superuser: bool = False
     ref_code: str | None = Field(default=None, max_length=32, unique=True, index=True)
@@ -37,6 +36,14 @@ class UserBase(BaseModel):
     trial_expired_at: datetime | None = None
     email_verified: bool | None = None
     last_login_provider: str | None = Field(default=None, max_length=50)
+    country_code: str | None = Field(default=None, max_length=3)  # ISO 3166-1 alpha-2 (e.g. "VN", "US")
+    locale: str | None = Field(default="en", max_length=10)  # e.g. "en", "vi", "en-US"
+    timezone: str | None = Field(default=None, max_length=50)  # e.g. "Asia/Ho_Chi_Minh"
+    currency: str | None = Field(default=None, max_length=3)  # ISO 4217, e.g. "USD", "VND"
+    gender: str | None = Field(default=None, max_length=20)  # e.g. "male", "female", "other"
+    birth_date: date | None = None
+    bio: str | None = Field(default=None, max_length=500)
+    job_title: str | None = Field(default=None, max_length=255)
 
 
 class UserPublic(UserBase):
@@ -77,7 +84,6 @@ class UserUpdate(UserBase):
     phone_number: str | None = Field(default=None, max_length=255)
     company_name: str | None = Field(default=None, max_length=255)
     website_url: str | None = None
-    role: str | None = Field(default=None, max_length=32)
     lemon_customer_id: str | None = Field(default=None, max_length=255)
     is_superuser: bool | None = None
     ref_code: str | None = Field(default=None, max_length=32)
@@ -86,6 +92,14 @@ class UserUpdate(UserBase):
     trial_expired_at: datetime | None = None
     email_verified: bool | None = None
     last_login_provider: str | None = Field(default=None, max_length=50)
+    country_code: str | None = Field(default=None, max_length=3)
+    locale: str | None = Field(default=None, max_length=10)
+    timezone: str | None = Field(default=None, max_length=50)
+    currency: str | None = Field(default=None, max_length=3)
+    gender: str | None = Field(default=None, max_length=20)
+    birth_date: date | None = None
+    bio: str | None = Field(default=None, max_length=500)
+    job_title: str | None = Field(default=None, max_length=255)
 
 
 class UserUpdateMe(BaseModel):
@@ -94,6 +108,14 @@ class UserUpdateMe(BaseModel):
     phone_number: str | None = Field(default=None, max_length=255)
     company_name: str | None = Field(default=None, max_length=255)
     website_url: str | None = None
+    country_code: str | None = Field(default=None, max_length=3)
+    locale: str | None = Field(default=None, max_length=10)
+    timezone: str | None = Field(default=None, max_length=50)
+    currency: str | None = Field(default=None, max_length=3)
+    gender: str | None = Field(default=None, max_length=20)
+    birth_date: date | None = None
+    bio: str | None = Field(default=None, max_length=500)
+    job_title: str | None = Field(default=None, max_length=255)
 
 
 class UpdatePassword(BaseModel):

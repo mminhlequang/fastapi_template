@@ -1,6 +1,6 @@
 import uuid
 from typing import Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, status
 from sqlmodel import col, delete, func, select
@@ -17,15 +17,10 @@ from app.models import User, UserSubscription, Payment
 from app.schemas.base import Message, ListResponse
 from app.schemas.user import (
     UserCreate,
-    TokenResponse,
     UserResponse,
     UserUpdate,
     UserUpdateMe,
-    UserRegister,
     UpdatePassword,
-    SocialLoginRequest,
-    SocialAccountResponse,
-    SocialLinkRequest,
 )
 from app.cruds.users import (
     create_user,
@@ -37,15 +32,6 @@ from app.utils.sent_email import (
 )
 from app.utils.file_uploads import file_upload_service
 
-from app.cruds.social_account import (
-    get_social_account_by_provider,
-    create_social_account,
-    get_user_social_accounts,
-    delete_social_account,
-    get_user_info_from_provider,
-    create_user_from_social,
-)
-from app.core import security
 import logging
 import os
 
@@ -120,6 +106,14 @@ def update_user_me(
     phone_number: Optional[str] = Form(None),
     company_name: Optional[str] = Form(None),
     website_url: Optional[str] = Form(None),
+    country_code: Optional[str] = Form(None),
+    locale: Optional[str] = Form(None),
+    timezone: Optional[str] = Form(None),
+    currency: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    birth_date: Optional[date] = Form(None),
+    bio: Optional[str] = Form(None),
+    job_title: Optional[str] = Form(None),
     avatar: Optional[UploadFile] = File(None),
 ) -> Any:
     """
@@ -170,6 +164,22 @@ def update_user_me(
         update_data["company_name"] = company_name
     if website_url is not None:
         update_data["website_url"] = website_url
+    if country_code is not None:
+        update_data["country_code"] = country_code
+    if locale is not None:
+        update_data["locale"] = locale
+    if timezone is not None:
+        update_data["timezone"] = timezone
+    if currency is not None:
+        update_data["currency"] = currency
+    if gender is not None:
+        update_data["gender"] = gender
+    if birth_date is not None:
+        update_data["birth_date"] = birth_date
+    if bio is not None:
+        update_data["bio"] = bio
+    if job_title is not None:
+        update_data["job_title"] = job_title
     if avatar_url is not None:
         update_data["avatar_url"] = avatar_url
 
@@ -225,24 +235,6 @@ def read_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     return user
 
 
-@router.post("/signup", response_model=UserResponse)
-def register_user(session: SessionDep, user_in: UserRegister) -> Any:
-    """
-    Create new user without the need to be logged in.
-    """
-    user = get_user_by_email(session=session, email=user_in.email)
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system",
-        )
-    logger.info(f"User in: {user_in}")
-    # Convert UserRegister to UserCreate by extracting the dict and creating new instance
-    user_create = UserCreate(**user_in.model_dump())
-    user = create_user(session=session, user_create=user_create)
-    return user
-
-
 @router.get("/{user_id}", response_model=UserResponse)
 def read_user_by_id(
     user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
@@ -274,6 +266,14 @@ def update_user_by_id(
     phone_number: Optional[str] = Form(None),
     company_name: Optional[str] = Form(None),
     website_url: Optional[str] = Form(None),
+    country_code: Optional[str] = Form(None),
+    locale: Optional[str] = Form(None),
+    timezone: Optional[str] = Form(None),
+    currency: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    birth_date: Optional[date] = Form(None),
+    bio: Optional[str] = Form(None),
+    job_title: Optional[str] = Form(None),
     role: Optional[str] = Form(None),
     is_superuser: Optional[bool] = Form(None),
     password: Optional[str] = Form(None),
@@ -334,6 +334,22 @@ def update_user_by_id(
         update_data["company_name"] = company_name
     if website_url is not None:
         update_data["website_url"] = website_url
+    if country_code is not None:
+        update_data["country_code"] = country_code
+    if locale is not None:
+        update_data["locale"] = locale
+    if timezone is not None:
+        update_data["timezone"] = timezone
+    if currency is not None:
+        update_data["currency"] = currency
+    if gender is not None:
+        update_data["gender"] = gender
+    if birth_date is not None:
+        update_data["birth_date"] = birth_date
+    if bio is not None:
+        update_data["bio"] = bio
+    if job_title is not None:
+        update_data["job_title"] = job_title
     if role is not None:
         update_data["role"] = role
     if is_superuser is not None:
@@ -423,222 +439,3 @@ def set_inactive_status(
     session.commit()
 
     return Message(message=message)
-
-
-# ============= SOCIAL AUTHENTICATION ROUTES =============
-
-
-@router.post("/auth/social/login", response_model=TokenResponse)
-async def social_login(*, session: SessionDep, social_login: SocialLoginRequest) -> Any:
-    """
-    Social login/register endpoint.
-    If user exists, login. If not, create new user.
-    """
-    try:
-        # Get user info from social provider
-        user_info = await get_user_info_from_provider(
-            social_login.provider, social_login.access_token
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to verify {social_login.provider} token: {str(e)}",
-        )
-
-    provider_user_id = user_info.get("id")
-    provider_email = user_info.get("email")
-    provider_name = user_info.get("name")
-    phone_number = user_info.get("phone_number")  # For Firebase Phone auth
-
-    if not provider_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to get user ID from provider",
-        )
-
-    # Check if social account already exists
-    social_account = get_social_account_by_provider(
-        session=session,
-        provider=social_login.provider,
-        provider_user_id=provider_user_id,
-    )
-
-    user = None
-    is_new_user = False
-
-    if social_account:
-        # Social account exists, get the user
-        user = session.get(User, social_account.user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found for this social account",
-            )
-
-        # Update avatar if user doesn't have one and we got one from social
-        if not user.avatar_url and user_info.get("uploaded_avatar_url"):
-            user.avatar_url = user_info.get("uploaded_avatar_url")
-    else:
-        # Social account doesn't exist
-        # Try to find user by email if email is provided, or by phone for Firebase Phone
-        user = None
-        if provider_email:
-            user = get_user_by_email(session=session, email=provider_email)
-        elif phone_number and social_login.provider == "firebase_phone":
-            # For Firebase Phone, try to find user by phone number
-            from sqlmodel import select
-
-            statement = select(User).where(User.phone_number == phone_number)
-            user = session.exec(statement).first()
-
-        if user:
-            # User exists with same email/phone, link social account
-            create_social_account(
-                session=session,
-                user_id=user.id,
-                provider=social_login.provider,
-                provider_user_id=provider_user_id,
-                provider_email=provider_email,
-            )
-
-            # Update avatar if user doesn't have one and we got one from social
-            if not user.avatar_url and user_info.get("uploaded_avatar_url"):
-                user.avatar_url = user_info.get("uploaded_avatar_url")
-        else:
-            # Create new user with avatar if available
-            avatar_url = user_info.get("uploaded_avatar_url")
-            user = create_user_from_social(
-                session=session,
-                provider=social_login.provider,
-                provider_user_id=provider_user_id,
-                provider_email=provider_email,
-                provider_name=provider_name,
-                avatar_url=avatar_url,
-                phone_number=phone_number,
-            )
-            is_new_user = True
-
-            # Create social account for new user
-            create_social_account(
-                session=session,
-                user_id=user.id,
-                provider=social_login.provider,
-                provider_user_id=provider_user_id,
-                provider_email=provider_email,
-            )
-
-    # Update last login provider
-    user.last_login_provider = social_login.provider
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-
-    # Generate tokens
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-
-    access_token = security.create_access_token(
-        user.id, expires_delta=access_token_expires
-    )
-    refresh_token = security.create_refresh_token(
-        user.id, expires_delta=refresh_token_expires
-    )
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
-
-
-@router.post("/me/social/link", response_model=Message)
-async def link_social_account(
-    *, session: SessionDep, current_user: CurrentUser, link_request: SocialLinkRequest
-) -> Any:
-    """
-    Link a social account to current user.
-    """
-    try:
-        # Get user info from social provider
-        user_info = await get_user_info_from_provider(
-            link_request.provider, link_request.access_token
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to verify {link_request.provider} token: {str(e)}",
-        )
-
-    provider_user_id = user_info.get("id")
-    provider_email = user_info.get("email")
-
-    if not provider_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to get user ID from provider",
-        )
-
-    # Check if social account already exists
-    existing_social_account = get_social_account_by_provider(
-        session=session,
-        provider=link_request.provider,
-        provider_user_id=provider_user_id,
-    )
-
-    if existing_social_account:
-        if existing_social_account.user_id == current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This social account is already linked to your account",
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This social account is already linked to another user",
-            )
-
-    # Create social account link
-    create_social_account(
-        session=session,
-        user_id=current_user.id,
-        provider=link_request.provider,
-        provider_user_id=provider_user_id,
-        provider_email=provider_email,
-    )
-
-    return Message(
-        message=f"{link_request.provider.title()} account linked successfully"
-    )
-
-
-@router.get("/me/social/accounts", response_model=list[SocialAccountResponse])
-def get_my_social_accounts(*, session: SessionDep, current_user: CurrentUser) -> Any:
-    """
-    Get all social accounts linked to current user.
-    """
-    social_accounts = get_user_social_accounts(session=session, user_id=current_user.id)
-    return social_accounts
-
-
-@router.delete("/me/social/{provider}", response_model=Message)
-def unlink_social_account(
-    *, session: SessionDep, current_user: CurrentUser, provider: str
-) -> Any:
-    """
-    Unlink a social account from current user.
-    """
-    if provider not in ["facebook", "google", "apple", "firebase_phone"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid provider"
-        )
-
-    success = delete_social_account(
-        session=session, user_id=current_user.id, provider=provider
-    )
-
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No {provider} account linked to your account",
-        )
-
-    return Message(message=f"{provider.title()} account unlinked successfully")
