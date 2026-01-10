@@ -2,7 +2,9 @@ services:
 
   db:
     image: postgres:17
-    restart: always
+    restart: "no"
+    ports:
+      - "127.0.0.1:5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -21,7 +23,9 @@ services:
 
   adminer:
     image: adminer
-    restart: always
+    restart: "no"
+    ports:
+      - "8082:8080"
     networks:
       - default
     depends_on:
@@ -65,7 +69,9 @@ services:
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
-    restart: always
+    restart: "no"
+    ports:
+      - "8002:8000"
     networks:
       - default
     depends_on:
@@ -74,6 +80,22 @@ services:
         restart: true
       prestart:
         condition: service_completed_successfully
+    # command: sleep infinity  # Infinite loop to keep container alive doing nothing
+    command:
+      - fastapi
+      - run
+      # - --reload
+      - "app/main.py"
+    develop:
+      watch:
+        - path: .
+          action: sync
+          target: /app
+          ignore:
+            - ./.venv
+            - .venv
+        - path: ./pyproject.toml
+          action: rebuild
     env_file:
       - .env
     environment:
@@ -93,6 +115,15 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+    # TODO: remove once coverage is done locally
+    # volumes:
+    #   - ./htmlcov:/app/htmlcov
+    # Removed mailcatcher SMTP configuration - now using Google SMTP
+    # environment:
+    #   SMTP_HOST: "mailcatcher"
+    #   SMTP_PORT: "1025"
+    #   SMTP_TLS: "false"
+    #   EMAILS_FROM_EMAIL: "noreply@example.com"
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
@@ -106,4 +137,16 @@ services:
 volumes:
   app-db-data:
   app-public-data:  
+
+# Removed mailcatcher service - now using Google SMTP
+# mailcatcher:
+#   image: schickling/mailcatcher
+#   ports:
+#     - "1080:1080"
+#     - "1025:1025"
+
+# networks:
+#   traefik-public:
+#     # For local dev, don't expect an external Traefik network
+#     external: false  
 

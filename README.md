@@ -2,15 +2,15 @@
 
 git clone ...
 
-cd startomation_api; git pull; docker compose down; docker compose up -d
+cd {{project name}}; git pull; docker compose down; docker compose up -d
 
 sudo apt update
 sudo apt install nginx -y
 
-sudo nano /etc/nginx/sites-available/api.genqr.pro.conf
+sudo nano /etc/nginx/sites-available/{{domain}}.conf
 server {
     listen 80;
-    server_name api.genqr.pro;
+    server_name {{domain}};
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -22,10 +22,10 @@ server {
     }
 }
 
-sudo ln -s /etc/nginx/sites-available/api.genqr.pro.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/{{domain}}.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
 sudo apt install certbot python3-certbot-nginx -y
 
-sudo certbot --nginx -d api.genqr.pro
+sudo certbot --nginx -d {{domain}}
