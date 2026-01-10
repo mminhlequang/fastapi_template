@@ -68,6 +68,65 @@ def upgrade():
         sa.UniqueConstraint("provider", "provider_user_id", name="uq_provider_user"),
     )
 
+    # Create user_device_tokens table
+    op.create_table(
+        "user_device_tokens",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("provider", sa.String(length=50), nullable=False),
+        sa.Column("device_token", sa.String(length=1000), nullable=False),
+        sa.Column("device_type", sa.String(length=50), nullable=False),
+        sa.Column("device_name", sa.String(length=255), nullable=True),
+        sa.Column("device_id", sa.String(length=255), nullable=True),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("is_verified", sa.Boolean(), nullable=False),
+        sa.Column("last_used_at", sa.DateTime(), nullable=True),
+        sa.Column("expires_at", sa.DateTime(), nullable=True),
+        sa.Column("app_version", sa.String(length=50), nullable=True),
+        sa.Column("os_version", sa.String(length=50), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_id", "provider", "device_token", name="uq_user_provider_token"),
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_user_id"),
+        "user_device_tokens",
+        ["user_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_provider"),
+        "user_device_tokens",
+        ["provider"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_device_type"),
+        "user_device_tokens",
+        ["device_type"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_is_active"),
+        "user_device_tokens",
+        ["is_active"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_expires_at"),
+        "user_device_tokens",
+        ["expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_user_device_tokens_device_id"),
+        "user_device_tokens",
+        ["device_id"],
+        unique=False,
+    )
+
     # Create billing_info table
     op.create_table(
         "billing_infos",
@@ -783,6 +842,32 @@ def downgrade():
     op.drop_table("user_subscriptions")
     op.drop_table("subscription_plans")
     op.drop_table("billing_infos")
+
+    op.drop_index(
+        op.f("ix_user_device_tokens_device_id"),
+        table_name="user_device_tokens",
+    )
+    op.drop_index(
+        op.f("ix_user_device_tokens_expires_at"),
+        table_name="user_device_tokens",
+    )
+    op.drop_index(
+        op.f("ix_user_device_tokens_is_active"),
+        table_name="user_device_tokens",
+    )
+    op.drop_index(
+        op.f("ix_user_device_tokens_device_type"),
+        table_name="user_device_tokens",
+    )
+    op.drop_index(
+        op.f("ix_user_device_tokens_provider"),
+        table_name="user_device_tokens",
+    )
+    op.drop_index(
+        op.f("ix_user_device_tokens_user_id"),
+        table_name="user_device_tokens",
+    )
+    op.drop_table("user_device_tokens")
     op.drop_table("social_accounts")
 
     op.drop_index(op.f("ix_users_ref_code"), table_name="users")

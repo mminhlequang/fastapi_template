@@ -22,12 +22,6 @@ def get_db() -> Generator[Session, None, None]:
         yield session
 
 
-def get_session() -> Generator[Session, None, None]:
-    # Provide a database session for dependency injection
-    with Session(engine) as session:
-        yield session
-
-
 SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(reusable_http_bearer)]
 

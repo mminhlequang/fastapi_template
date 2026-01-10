@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser, get_db, get_current_user
 from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash
@@ -23,7 +23,9 @@ from app.schemas.user import (
     SocialLoginRequest,
     SocialLinkRequest,
     SocialAccountResponse,
-)
+    NotificationTokenRegisterRequest,
+    NotificationTokenResponse,
+) 
 
 from app.cruds.users import (
     authenticate,
@@ -39,6 +41,10 @@ from app.cruds.social_account import (
     get_user_info_from_provider,
     create_user_from_social,
 )
+
+from app.cruds.device_tokens import DeviceTokenCRUD as NotificationTokenCRUD
+
+from app.models import User
 
 from app.utils.sent_email import (
     generate_password_reset_token,
@@ -474,3 +480,45 @@ def unlink_social_account(
         )
 
     return Message(message=f"{provider.title()} account unlinked successfully")
+
+
+# ==================== Device Token Registration ====================
+
+@router.post(
+    "/device-token",
+    response_model=NotificationTokenResponse,
+    summary="Register device token for push notifications",
+    description="Register a new device token for push notifications. If the device already has a token for this provider, it will be updated.",
+)
+async def register_device_token(
+    request: NotificationTokenRegisterRequest,
+    current_user: CurrentUser,
+    db: SessionDep,
+) -> NotificationTokenResponse:
+    """
+    Register a device token for the authenticated user.
+    
+    This endpoint allows users to register their device tokens for push notifications.
+    If the same device already has a token for the specified provider, it will be updated.
+    
+    Query Parameters:
+    - provider: The push notification provider (fcm, apns, etc.)
+    - device_token: The actual token from the provider
+    - device_type: Type of device (ios, android, web, etc.)
+    - device_name: (Optional) User-friendly name for the device
+    - device_id: (Optional) Hardware identifier
+    - app_version: (Optional) App version
+    - os_version: (Optional) OS version
+    """
+    token = NotificationTokenCRUD.register_token(
+        db=db,
+        user_id=current_user.id,
+        provider=request.provider,
+        device_token=request.device_token,
+        device_type=request.device_type,
+        device_name=request.device_name,
+        device_id=request.device_id,
+        app_version=request.app_version,
+        os_version=request.os_version,
+    )
+    return token

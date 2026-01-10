@@ -169,7 +169,37 @@ class SocialAccountResponse(BaseModel):
 class SocialLinkRequest(BaseModel):
     provider: str = Field(..., pattern="^(facebook|google|apple)$")
     access_token: str  # Token từ client-side OAuth
+    
+
+class NotificationTokenRegisterRequest(BaseModel):
+    """Request to register a new device token."""
+    
+    provider: str = Field(..., description="Provider: fcm, apns, firebase, onesignal, web_push")
+    device_token: str = Field(..., description="Token from provider")
+    device_type: str = Field(..., description="Device type: ios, android, web, macos, windows")
+    device_name: Optional[str] = Field(None, description="User-friendly device name")
+    device_id: Optional[str] = Field(None, description="Hardware device identifier")
+    app_version: Optional[str] = Field(None, description="App version")
+    os_version: Optional[str] = Field(None, description="OS version")
+ 
+
+class NotificationTokenResponse(BaseModel):
+    """Response with device token data."""
+    
+    id: uuid.UUID
+    provider: str
+    device_type: str
+    device_name: Optional[str]
+    is_active: bool
+    is_verified: bool
+    last_used_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # Update forward references
 User.model_rebuild()
+

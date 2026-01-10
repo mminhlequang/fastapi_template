@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 from app.models import User, SubscriptionPlan, UserSubscription, Payment
-from app.api.deps import get_session, get_current_user
+from app.api.deps import get_db, get_current_user
 from pydantic import BaseModel
 import httpx
 import os
@@ -29,7 +29,7 @@ class CheckoutResponse(BaseModel):
 @router.post("/", response_model=CheckoutResponse)
 def create_checkout_session(
     data: CheckoutRequest,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     logger.info(
@@ -173,7 +173,7 @@ def create_checkout_session(
 # === 5. Webhook endpoint for Lemon Squeezy ===
 @router.post("/webhooks/lemonsqueezy")
 async def lemonsqueezy_webhook(
-    request: Request, session: Session = Depends(get_session)
+    request: Request, session: Session = Depends(get_db)
 ):
     logger.info("[POST /webhooks/lemonsqueezy] Webhook received")
 

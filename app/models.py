@@ -4,7 +4,7 @@ from datetime import datetime, date
 from typing import Optional
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, JSON, UniqueConstraint as sa_UniqueConstraint, ForeignKey
+from sqlalchemy import Column, JSON, UniqueConstraint as sa_UniqueConstraint, ForeignKey, Index
 
 
 # Database model, database table inferred from class name
@@ -41,6 +41,7 @@ class User(SQLModel, table=True):
     subscriptions: list["UserSubscription"] = Relationship(back_populates="user")
     payments: list["Payment"] = Relationship(back_populates="user")
     social_accounts: list["SocialAccount"] = Relationship(back_populates="user")
+    device_tokens: list["UserDeviceToken"] = Relationship(back_populates="user", cascade_delete=True)
 
     class Config:
         arbitrary_types_allowed = True
@@ -73,6 +74,69 @@ class SocialAccount(SQLModel, table=True):
                 "provider", "provider_user_id", name="uq_provider_user"
             ),
         )
+
+
+# --- User Device Tokens Model ---
+# For push notifications (FCM, APNs, etc.)
+class UserDeviceToken(SQLModel, table=True):
+    __tablename__ = "user_device_tokens"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        sa_column=Column(
+            "user_id",
+            ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+
+    # Provider Information
+    # Options: 'fcm', 'apns', 'firebase', 'onesignal', 'web_push'
+    provider: str = Field(max_length=50, nullable=False, index=True)
+    # Actual token from provider (can be very long)
+    device_token: str = Field(max_length=1000, nullable=False)
+
+    # Device Information
+    # Options: 'ios', 'android', 'web', 'macos', 'windows'
+    device_type: str = Field(max_length=50, nullable=False, index=True)
+    # User-friendly device name: "iPhone 14 Pro", "Samsung Galaxy S23"
+    device_name: str | None = Field(default=None, max_length=255)
+    # Hardware identifier (UDID, Android ID, etc.)
+    device_id: str | None = Field(default=None, max_length=255, index=True)
+
+    # Status & Activity
+    is_active: bool = Field(default=True, nullable=False, index=True)
+    # Token verified by provider (successful test push)
+    is_verified: bool = Field(default=False, nullable=False)
+    # When this token was last used to send a notification
+    last_used_at: datetime | None = None
+    # When token will expire (if provider specifies)
+    expires_at: datetime | None = Field(default=None, index=True)
+
+    # Metadata
+    # App version on device: "1.2.3"
+    app_version: str | None = Field(default=None, max_length=50)
+    # OS version: "iOS 17.1", "Android 14"
+    os_version: str | None = Field(default=None, max_length=50)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user: User = Relationship(back_populates="device_tokens")
+
+    class Config:
+        table_args = (
+            # Unique: một device chỉ có một token cho một provider
+            sa_UniqueConstraint(
+                "user_id", "provider", "device_token", 
+                name="uq_user_provider_token"
+            ),
+            Index("ix_active_tokens", "user_id", "is_active"),
+            Index("ix_expired_tokens", "expires_at"),
+        )
+        arbitrary_types_allowed = True
 
 
 # Billing info for user (company, tax, address, ...)
