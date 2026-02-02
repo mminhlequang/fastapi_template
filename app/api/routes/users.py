@@ -21,6 +21,13 @@ from app.schemas.user import (
     UserUpdate,
     UserUpdateMe,
     UpdatePassword,
+    RequestUpdateEmailOTP,
+    VerifyUpdateEmailOTP,
+    ConfirmUpdateEmail,
+    EmailUpdateTokenResponse,
+    RequestUpdatePhoneCheck,
+    PhoneAvailabilityResponse,
+    ConfirmUpdatePhone,
 )
 from app.cruds.users import (
     create_user,
@@ -439,3 +446,313 @@ def set_inactive_status(
     session.commit()
 
     return Message(message=message)
+
+
+# ============================================
+# Email Update Flow with OTP
+# ============================================
+
+
+@router.post("/me/update-email/otp-request", response_model=Message)
+def request_email_update_otp(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: RequestUpdateEmailOTP,
+) -> Message:
+    """
+    Step 1: Request OTP for email update
+    Sends a 6-digit OTP to the new email address
+    """
+    from app.services.otp_service import (
+        create_otp,
+        send_otp_email,
+        OTP_EXPIRY_MINUTES,
+        OTP_PURPOSE_EMAIL_UPDATE,
+    )
+
+    # Normalize new email
+    normalized_email = body.new_email.lower()
+
+    # Check if user is trying to update to the same email
+    if current_user.email == normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New email is the same as your current email.",
+        )
+
+    # Check if new email already exists in system
+    existing_user = get_user_by_email(session=session, email=normalized_email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The email address is already registered in the system.",
+        )
+
+    try:
+        # Create OTP
+        otp_record = create_otp(
+            session=session,
+            purpose=OTP_PURPOSE_EMAIL_UPDATE,
+            user_id=current_user.id,
+            email=normalized_email,
+            otp_expiry_minutes=OTP_EXPIRY_MINUTES,
+        )
+
+        # Send OTP email
+        send_otp_email(
+            email_to=normalized_email,
+            otp_code=otp_record.otp_code,
+            purpose=OTP_PURPOSE_EMAIL_UPDATE,
+            valid_minutes=OTP_EXPIRY_MINUTES,
+        )
+
+        logger.info(
+            f"Email update OTP sent to {normalized_email} for user {current_user.id}"
+        )
+        logger.info(
+            f"OTP Code (dev only): {otp_record.otp_code}"
+        )  # Remove in production
+
+        return Message(
+            message=f"Verification code has been sent to {normalized_email}. Valid for {OTP_EXPIRY_MINUTES} minutes."
+        )
+
+    except AssertionError as e:
+        logger.error(f"Email configuration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email service is not configured properly. Please contact administrator.",
+        )
+    except Exception as e:
+        logger.error(f"Failed to send email update OTP: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification code. Please try again later.",
+        )
+
+
+@router.post("/me/update-email/otp-verify", response_model=EmailUpdateTokenResponse)
+def verify_email_update_otp(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: VerifyUpdateEmailOTP,
+) -> EmailUpdateTokenResponse:
+    """
+    Step 2: Verify OTP and get confirmation token
+
+    Flow:
+    1. User calls /otp-request with new_email → receives OTP via email
+    2. User calls /otp-verify with new_email + OTP → receives confirmation_token
+    3. User calls /confirm with confirmation_token + new_email → email is updated
+
+    Args:
+        body: New email and OTP code
+        session: Database session
+        current_user: Current authenticated user
+
+    Returns:
+        Confirmation token that can be used to update email
+    """
+    from app.services.otp_service import (
+        verify_otp_code,
+        mark_otp_as_used,
+        OTP_PURPOSE_EMAIL_UPDATE,
+    )
+    from app.core import security
+
+    # Normalize email
+    normalized_email = body.new_email.lower()
+
+    # Verify OTP (this will raise HTTPException if invalid)
+    otp_record = verify_otp_code(
+        session, normalized_email, body.otp_code, purpose=OTP_PURPOSE_EMAIL_UPDATE
+    )
+
+    # Verify that the OTP belongs to the current user
+    if otp_record.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This OTP does not belong to you.",
+        )
+
+    # Generate confirmation token
+    confirmation_token = security.create_otp_token(
+        email=normalized_email,
+        otp_id=str(otp_record.id),
+        expires_delta=timedelta(minutes=15),  # 15 minutes to confirm email update
+    )
+
+    # Mark OTP as used
+    mark_otp_as_used(session, otp_record)
+    session.commit()
+
+    logger.info(
+        f"OTP verified for email update to {normalized_email}, user {current_user.id}"
+    )
+
+    return EmailUpdateTokenResponse(
+        confirmation_token=confirmation_token,
+        message="OTP verified successfully. Use the confirmation_token to update your email.",
+    )
+
+
+@router.post("/me/update-email/confirm", response_model=Message)
+def confirm_email_update(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: ConfirmUpdateEmail,
+) -> Message:
+    """
+    Step 3: Confirm email update with token from OTP verification
+
+    Flow:
+    1. User calls /otp-request with new_email → receives OTP via email
+    2. User calls /otp-verify with new_email + OTP → receives confirmation_token
+    3. User calls /confirm with confirmation_token + new_email → email is updated
+
+    Args:
+        body: Confirmation token and new email
+        session: Database session
+        current_user: Current authenticated user
+
+    Returns:
+        Success message
+    """
+    from app.core import security
+
+    try:
+        # Verify and decode confirmation token
+        payload = security.decode_otp_token(body.confirmation_token)
+
+        if "email" not in payload or "otp_id" not in payload:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid confirmation token format",
+            )
+
+        token_email = payload.get("email")
+        normalized_new_email = body.new_email.lower()
+
+        # Verify that the email in token matches the new email provided
+        if token_email != normalized_new_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email address does not match the verified email.",
+            )
+
+        # Check if user is trying to update to the same email
+        if current_user.email == normalized_new_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New email is the same as your current email.",
+            )
+
+        # Check if new email already exists in system (double check)
+        existing_user = get_user_by_email(session=session, email=normalized_new_email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The email address is already registered in the system.",
+            )
+
+        # Update user's email
+        old_email = current_user.email
+        current_user.email = normalized_new_email
+        session.add(current_user)
+        session.commit()
+        session.refresh(current_user)
+
+        logger.info(
+            f"Email updated successfully for user {current_user.id}: {old_email} -> {normalized_new_email}"
+        )
+
+        return Message(message="Email address updated successfully.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to confirm email update: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired confirmation token.",
+        )
+
+
+# ============================================
+# Phone Update Flow
+# ============================================
+
+
+@router.post("/me/update-phone/check", response_model=PhoneAvailabilityResponse)
+def check_phone_availability(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: RequestUpdatePhoneCheck,
+) -> PhoneAvailabilityResponse:
+    """
+    Check if the new phone number can be used.
+    Returns availability without applying any changes.
+    """
+    from app.cruds.users import get_user_by_phone_number
+
+    new_phone = body.new_phone_number.strip()
+
+    # Same as current phone
+    if current_user.phone_number == new_phone:
+        return PhoneAvailabilityResponse(is_available=False)
+
+    # Check existing user
+    existing_user = get_user_by_phone_number(session=session, phone_number=new_phone)
+    if existing_user and existing_user.id != current_user.id:
+        return PhoneAvailabilityResponse(is_available=False)
+
+    return PhoneAvailabilityResponse(is_available=True)
+
+
+@router.post("/me/update-phone/confirm", response_model=Message)
+def confirm_phone_update(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: ConfirmUpdatePhone,
+) -> Message:
+    """
+    Update current user's phone number.
+    Note: This is a simplified version. In production, you should verify 
+    the phone number with OTP or other verification methods.
+    """
+    from app.cruds.users import get_user_by_phone_number
+
+    new_phone = body.new_phone_number.strip()
+
+    # Check if same as current phone
+    if current_user.phone_number == new_phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New phone number is the same as your current phone number.",
+        )
+
+    # Check if phone already exists
+    existing_user = get_user_by_phone_number(session=session, phone_number=new_phone)
+    if existing_user and existing_user.id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This phone number is already registered in the system.",
+        )
+
+    # Update phone number
+    old_phone = current_user.phone_number
+    current_user.phone_number = new_phone
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    logger.info(
+        f"Phone updated successfully for user {current_user.id}: {old_phone} -> {new_phone}"
+    )
+
+    return Message(message="Phone number updated successfully.")

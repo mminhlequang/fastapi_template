@@ -139,6 +139,38 @@ class UserDeviceToken(SQLModel, table=True):
         arbitrary_types_allowed = True
 
 
+# OTP Verification Model - Multi-purpose OTP system
+class OTPVerification(SQLModel, table=True):
+    __tablename__ = "otp_verifications"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID | None = Field(
+        sa_column=Column("user_id", ForeignKey("users.id", ondelete="CASCADE")),
+        default=None,
+    )
+
+    # Purpose of OTP: password_reset, email_verification, phone_verification, 2fa, login, etc.
+    purpose: str = Field(max_length=50, nullable=False, index=True)
+
+    # Contact info (email or phone)
+    email: str | None = Field(default=None, max_length=255, index=True)
+    phone_number: str | None = Field(default=None, max_length=20, index=True)
+
+    # OTP details
+    otp_code: str = Field(max_length=6)  # 6-digit OTP
+
+    # Expiry and usage tracking
+    expires_at: datetime = Field(nullable=False)
+    is_used: bool = Field(default=False, index=True)
+    attempts: int = Field(default=0)  # Track verification attempts
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    used_at: datetime | None = Field(default=None)
+
+    # Relationship (optional - OTP có thể dùng cho user chưa đăng ký)
+    user: User | None = Relationship()
+
+
 # Billing info for user (company, tax, address, ...)
 class BillingInfo(SQLModel, table=True):
     __tablename__ = "billing_infos"

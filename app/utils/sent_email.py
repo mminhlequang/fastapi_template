@@ -37,7 +37,7 @@ class EmailData:
 
 def render_email_template(*, template_name: str, context: dict[str, Any]) -> str:
     template_str = (
-        Path(__file__).parent.parent / "email-templates" / "build" / template_name
+        Path(__file__).parent.parent / "email-templates" / template_name
     ).read_text()
     html_content = Template(template_str).render(context)
     return html_content
@@ -134,3 +134,109 @@ def verify_password_reset_token(token: str) -> str | None:
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None
+
+
+def generate_otp_email(
+    email_to: str,
+    otp_code: str,
+    purpose: str,
+    valid_minutes: int = 10,
+) -> EmailData:
+    """
+    Generate OTP email for any purpose
+
+    Args:
+        email_to: Recipient email
+        otp_code: 6-digit OTP code
+        purpose: Purpose of OTP (password_reset, email_verification, etc.)
+        valid_minutes: Validity period in minutes
+    """
+    project_name = settings.PROJECT_NAME
+
+    # OTP configuration based on purpose
+    otp_config = {
+        "password_reset": {
+            "icon": "🔐",
+            "title": "Password Reset OTP",
+            "greeting": "Hello",
+            "message": "We received a request to reset your password for your account.",
+            "purpose_detail": "Use this OTP to reset your password and regain access to your account.",
+            "subject": f"{project_name} - Password Reset OTP",
+            "warning_title": "Didn't request this?",
+            "warning_message": "If you did not request a password reset, please ignore this email. Your account is safe.",
+        },
+        "email_verification": {
+            "icon": "✉️",
+            "title": "Email Verification OTP",
+            "greeting": "Hello",
+            "message": "Welcome! Please verify your email address to complete your registration.",
+            "purpose_detail": "Use this OTP to verify that this email address belongs to you.",
+            "subject": f"{project_name} - Email Verification OTP",
+            "warning_title": "Didn't create an account?",
+            "warning_message": f"If you didn't create a {project_name} account, please ignore this email.",
+        },
+        "phone_verification": {
+            "icon": "📱",
+            "title": "Phone Verification OTP",
+            "greeting": "Hello",
+            "message": "Please verify your phone number to complete your registration.",
+            "purpose_detail": "Use this OTP to verify that this phone number belongs to you.",
+            "subject": f"{project_name} - Phone Verification OTP",
+            "warning_title": "Didn't request this?",
+            "warning_message": "If you didn't request a phone verification, please ignore this email.",
+        },
+        "two_factor_auth": {
+            "icon": "🔒",
+            "title": "Two-Factor Authentication OTP",
+            "greeting": "Hello",
+            "message": "Someone is trying to access your account. Use this OTP to verify it's you.",
+            "purpose_detail": "This OTP is required to log in to your account for security purposes.",
+            "subject": f"{project_name} - Two-Factor Authentication OTP",
+            "warning_title": "Suspicious activity?",
+            "warning_message": "If this wasn't you, please change your password immediately and contact support.",
+        },
+        "login": {
+            "icon": "🚀",
+            "title": "Login OTP",
+            "greeting": "Hello",
+            "message": "Someone is trying to log in to your account using this email.",
+            "purpose_detail": "Use this OTP to complete your login.",
+            "subject": f"{project_name} - Login OTP",
+            "warning_title": "Unauthorized access?",
+            "warning_message": "If this wasn't you, please ignore this email and change your password.",
+        },
+        "email_update": {
+            "icon": "✉️",
+            "title": "Email Update Verification OTP",
+            "greeting": "Hello",
+            "message": "You requested to update the email associated with your account.",
+            "purpose_detail": "Use this OTP to verify and confirm your new email address.",
+            "subject": f"{project_name} - Email Update OTP",
+            "warning_title": "Didn't request this?",
+            "warning_message": "If you did not request an email change, please ignore this email and keep your account secure.",
+        },
+    }
+
+    # Get config for this purpose, default to password_reset
+    config = otp_config.get(purpose, otp_config["password_reset"])
+
+    # Build context
+    context = {
+        "project_name": project_name,
+        "icon": config["icon"],
+        "title": config["title"],
+        "greeting": config["greeting"],
+        "message": config["message"],
+        "purpose_detail": config["purpose_detail"],
+        "otp_code": otp_code,
+        "valid_minutes": valid_minutes,
+        "warning_title": config["warning_title"],
+        "warning_message": config["warning_message"],
+    }
+
+    html_content = render_email_template(
+        template_name="otp.html",
+        context=context,
+    )
+
+    return EmailData(html_content=html_content, subject=config["subject"])

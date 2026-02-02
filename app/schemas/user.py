@@ -200,6 +200,56 @@ class NotificationTokenResponse(BaseModel):
         from_attributes = True
 
 
+# OTP Email Update schemas
+class RequestUpdateEmailOTP(BaseModel):
+    """Request to send OTP for email update"""
+
+    new_email: EmailStr
+
+
+class VerifyUpdateEmailOTP(BaseModel):
+    """Verify OTP and get confirmation token (Step 2 of 3)"""
+
+    new_email: EmailStr
+    otp_code: str = Field(min_length=6, max_length=6, pattern="^[0-9]{6}$")
+
+
+class ConfirmUpdateEmail(BaseModel):
+    """Confirm email update using token from OTP verification (Step 3 of 3)"""
+
+    confirmation_token: str
+    new_email: EmailStr
+
+
+class EmailUpdateTokenResponse(BaseModel):
+    """Response containing confirmation token after OTP verification"""
+
+    confirmation_token: str
+    message: str = (
+        "OTP verified successfully. Use the confirmation_token to update your email."
+    )
+
+
+# Phone update schemas
+class RequestUpdatePhoneCheck(BaseModel):
+    """Request payload to check new phone availability"""
+
+    new_phone_number: str = Field(min_length=5, max_length=20)
+
+
+class PhoneAvailabilityResponse(BaseModel):
+    """Response indicating whether phone number is available"""
+
+    is_available: bool
+
+
+class ConfirmUpdatePhone(BaseModel):
+    """Confirm phone update using Firebase ID token"""
+
+    new_phone_number: str = Field(min_length=5, max_length=20)
+    id_token: str  # Firebase ID token from phone authentication
+
+
 # Update forward references
 User.model_rebuild()
 

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project_name }} - New Account</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    .container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      color: #009688;
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .header-icon {
+      font-size: 48px;
+      margin: 10px 0;
+    }
+
+    .content {
+      margin-bottom: 30px;
+    }
+
+    .content p {
+      margin: 12px 0;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #009688;
+      color: white;
+      padding: 15px 30px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin: 20px 0;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .button:hover {
+      background-color: #00796b;
+    }
+
+    .button-container {
+      text-align: center;
+      margin: 25px 0;
+    }
+
+    .account-details {
+      background-color: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .account-details p {
+      margin: 8px 0;
+      font-family: 'Courier New', monospace;
+    }
+
+    .account-details strong {
+      color: #2e7d32;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .info-box {
+      background-color: #e3f2fd;
+      border-left: 4px solid #2196F3;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #0d47a1;
+    }
+
+    .info-box strong {
+      color: #0d47a1;
+    }
+
+    .security-tip {
+      background-color: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .security-tip strong {
+      color: #0c5460;
+    }
+
+    .security-tip ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .security-tip li {
+      margin: 5px 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .footer p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">👋</div>
+      <h1>Welcome to {{ project_name }}!</h1>
+    </div>
+
+    <div class="content">
+      <p>Hello,</p>
+      <p>Your account has been successfully created! Here are your account details:</p>
+
+      <div class="account-details">
+        <p><strong>Username/Email:</strong> {{ username }}</p>
+        <p><strong>Temporary Password:</strong> {{ password }}</p>
+      </div>
+
+      <div class="info-box">
+        <strong>ℹ️ Important:</strong> Save your credentials in a safe place. You'll use them to log in to your account.
+      </div>
+
+      <div class="button-container">
+        <a href="{{ link }}" class="button">Access Your Dashboard</a>
+      </div>
+
+      <div class="security-tip">
+        <strong>🛡️ Recommended Actions:</strong>
+        <ul>
+          <li>Log in immediately with your temporary password</li>
+          <li>Change your password to something memorable and secure</li>
+          <li>Complete your profile information</li>
+          <li>Set up two-factor authentication (if available)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>{{ project_name }}</strong></p>
+      <p>This is an automated email. Please do not reply to this message.</p>
+      <p style="margin-top: 15px; font-size: 12px; color: #999;">
+        © {{ project_name }}. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

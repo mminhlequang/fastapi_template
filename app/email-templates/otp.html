@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project_name }} - OTP Verification</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    .container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      color: #009688;
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .header-icon {
+      font-size: 48px;
+      margin: 10px 0;
+    }
+
+    .content {
+      margin-bottom: 30px;
+    }
+
+    .content p {
+      margin: 12px 0;
+    }
+
+    .otp-container {
+      background-color: #f8f9fa;
+      border: 2px dashed #009688;
+      border-radius: 8px;
+      padding: 25px;
+      text-align: center;
+      margin: 25px 0;
+    }
+
+    .otp-code {
+      font-size: 42px;
+      font-weight: bold;
+      color: #009688;
+      letter-spacing: 8px;
+      font-family: 'Courier New', monospace;
+      margin: 10px 0;
+    }
+
+    .otp-label {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .purpose-message {
+      background-color: #e3f2fd;
+      border-left: 4px solid #2196F3;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+      color: #0d47a1;
+      font-size: 14px;
+    }
+
+    .expiry-info {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .expiry-info strong {
+      color: #856404;
+    }
+
+    .warning {
+      background-color: #f8d7da;
+      border-left: 4px solid #dc3545;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+      color: #721c24;
+      font-size: 14px;
+    }
+
+    .security-tip {
+      background-color: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 12px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .security-tip strong {
+      color: #0c5460;
+    }
+
+    .security-tip ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .security-tip li {
+      margin: 5px 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .footer p {
+      margin: 5px 0;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #999;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">{{ icon }}</div>
+      <h1>{{ title }}</h1>
+    </div>
+
+    <div class="content">
+      <p>{{ greeting }},</p>
+      <p>{{ message }}</p>
+
+      <div class="purpose-message">
+        {{ purpose_detail }}
+      </div>
+
+      <div class="otp-container">
+        <div class="otp-label">Your One-Time Password (OTP) is:</div>
+        <div class="otp-code">{{ otp_code }}</div>
+        <div class="note">Valid for {{ valid_minutes }} minutes</div>
+      </div>
+
+      <div class="expiry-info">
+        <strong>⏰ Important:</strong> This OTP will expire in <strong>{{ valid_minutes }} minutes</strong>. Please use
+        it as soon as possible.
+      </div>
+
+      {% if warning_message %}
+      <div class="warning">
+        <strong>⚠️ {{ warning_title }}</strong><br>
+        {{ warning_message }}
+      </div>
+      {% endif %}
+
+      <div class="security-tip">
+        <strong>🛡️ Security Tips:</strong>
+        <ul>
+          <li>Never share this OTP with anyone</li>
+          <li>{{ project_name }} staff will never ask for your OTP</li>
+          <li>This is a one-time use code - it cannot be reused</li>
+          <li>Delete this email after using the OTP</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>{{ project_name }}</strong></p>
+      <p>This is an automated message, please do not reply to this email.</p>
+      <p style="margin-top: 15px; font-size: 12px; color: #999;">
+        © {{ project_name }}. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

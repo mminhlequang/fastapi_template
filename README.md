@@ -5,7 +5,9 @@
 Name = {{project_name}}
 API Domain = {{domain}}
 FRONTEND Domain = {{frontend domain}}
-Port = {{port}}
+Port FastAPI = {{port fastapi}}
+Port Adminer = {{port adminer}}
+Port Postgres = {{port postgres}}
 
 
 
@@ -22,7 +24,7 @@ server {
     server_name {{domain}};
 
     location / {
-        proxy_pass http://127.0.0.1:{{port}};
+        proxy_pass http://127.0.0.1:{{port fastapi}};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

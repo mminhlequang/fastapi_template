@@ -127,6 +127,54 @@ def upgrade():
         unique=False,
     )
 
+    # Create otp_verifications table
+    op.create_table(
+        "otp_verifications",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("purpose", sa.String(length=50), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=True),
+        sa.Column("phone_number", sa.String(length=20), nullable=True),
+        sa.Column("otp_code", sa.String(length=6), nullable=False),
+        sa.Column("expires_at", sa.DateTime(), nullable=False),
+        sa.Column("is_used", sa.Boolean(), nullable=False),
+        sa.Column("attempts", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("used_at", sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_otp_verifications_user_id"),
+        "otp_verifications",
+        ["user_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_otp_verifications_purpose"),
+        "otp_verifications",
+        ["purpose"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_otp_verifications_email"),
+        "otp_verifications",
+        ["email"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_otp_verifications_phone_number"),
+        "otp_verifications",
+        ["phone_number"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_otp_verifications_is_used"),
+        "otp_verifications",
+        ["is_used"],
+        unique=False,
+    )
+
     # Create billing_info table
     op.create_table(
         "billing_infos",
@@ -842,6 +890,28 @@ def downgrade():
     op.drop_table("user_subscriptions")
     op.drop_table("subscription_plans")
     op.drop_table("billing_infos")
+
+    op.drop_index(
+        op.f("ix_otp_verifications_is_used"),
+        table_name="otp_verifications",
+    )
+    op.drop_index(
+        op.f("ix_otp_verifications_phone_number"),
+        table_name="otp_verifications",
+    )
+    op.drop_index(
+        op.f("ix_otp_verifications_email"),
+        table_name="otp_verifications",
+    )
+    op.drop_index(
+        op.f("ix_otp_verifications_purpose"),
+        table_name="otp_verifications",
+    )
+    op.drop_index(
+        op.f("ix_otp_verifications_user_id"),
+        table_name="otp_verifications",
+    )
+    op.drop_table("otp_verifications")
 
     op.drop_index(
         op.f("ix_user_device_tokens_device_id"),

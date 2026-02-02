@@ -42,3 +42,32 @@ def verify_refresh_token(token: str) -> str | None:
         return str(payload["sub"])
     except Exception:
         return None
+
+
+def create_otp_token(
+    email: str, otp_id: str, expires_delta: timedelta = timedelta(minutes=15)
+) -> str:
+    """
+    Create a confirmation token for OTP verification
+    Used for email update flow: after OTP is verified, generate a short-lived token
+    """
+    expire = datetime.now(timezone.utc) + expires_delta
+    to_encode = {
+        "exp": expire,
+        "email": email,
+        "otp_id": otp_id,
+        "type": "otp_confirmation",
+    }
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def decode_otp_token(token: str) -> dict[str, Any]:
+    """
+    Decode and verify OTP confirmation token
+    Raises jwt.InvalidTokenError if token is invalid or expired
+    """
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "otp_confirmation":
+        raise jwt.InvalidTokenError("Invalid token type")
+    return payload
