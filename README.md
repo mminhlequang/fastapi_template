@@ -1,8 +1,17 @@
 # Backend FastAPI deployment:
 
+# Configs
+# Just need replace keyword by real value also at .env
+Name = {{project_name}}
+API Domain = {{domain}}
+FRONTEND Domain = {{frontend domain}}
+Port = {{port}}
+
+
+
 git clone ...
 
-cd {{project name}}; git pull; docker compose down; docker compose up -d
+cd {{project_name}}; git pull; docker compose down; docker compose up -d
 
 sudo apt update
 sudo apt install nginx -y
@@ -13,7 +22,7 @@ server {
     server_name {{domain}};
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:{{port}};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
